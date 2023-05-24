@@ -16,7 +16,7 @@ const indexProfile = async (req, res, next) => {
       where: { id: req.user.id },
     });
     const status = await Status.findOne({
-      where: { id: req.user.id },
+      where: { user_id: req.user.id },
     });
     return res.status(200).json({ profile, status });
   } catch (err) {
@@ -103,7 +103,7 @@ const statusModifyProfile = async (req, res, next) => {
         disease,
         allergy,
       },
-      { where: { id: req.user.id } }
+      { where: { user_id: req.user.id } }
     );
     if (!status[0]) {
       await Status.create({
@@ -263,18 +263,25 @@ const profileChart = async (req, res, next) => {
 const aiPlan = async (req, res, next) => {
   try {
     let { period, date, category, type } = req.body;
-    let data;
+    let result, data, nutrition, exercise;
     if (category == "nutritionPlan") data = NutritionPlan;
     if (category == "exercisePlan") data = ExercisePlan;
-    category = undefined;
     let period2;
     if (period === "day") period2 = 1;
     if (period === "week") period2 = 7;
     if (period === "month") period2 = 31;
     if (period === "year") period2 = 365;
-    const result = await modelPeriodCalculator(date, req, period2, data, category, type);
-    console.log("디버그", result);
-    return res.status(200).json(result);
+    if (category != "both"){
+      category = undefined;
+      result = await modelPeriodCalculator(date, req, period2, data, category, type);
+      return res.status(200).json(result);
+    }
+    else {
+      category = undefined;
+      nutrition = await modelPeriodCalculator(date, req, period2, NutritionPlan)
+      exercise = await modelPeriodCalculator(date, req, period2, ExercisePlan)
+      return res.status(200).json({nutrition, exercise})
+    }
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "서버 에러가 발생하였습니다." });
